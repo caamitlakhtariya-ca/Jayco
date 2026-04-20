@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--sf:#161b22;--sf2:#1c2333;--bd:#30363d;
+  --acc:#f78166;--a2:#79c0ff;--a3:#56d364;--a4:#e3b341;--a5:#bc8cff;
+  --tx:#e6edf3;--mu:#8b949e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:'Barlow',sans-serif;font-size:14px}
+
+/* TOPBAR */
+.topbar{background:var(--sf);border-bottom:1px solid var(--bd);height:52px;
+  display:flex;align-items:center;padding:0 20px;gap:16px;
+  position:sticky;top:0;z-index:50}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:1px}
+.logo span{color:var(--acc)}
+.tabs{display:flex;gap:2px;margin-left:20px}
+.tab{padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;
+  color:var(--mu);transition:.15s;border:1px solid transparent;white-space:nowrap}
+.tab:hover{color:var(--tx);background:var(--sf2)}
+.tab.active{color:var(--tx);background:var(--sf2);border-color:var(--bd)}
+.tab.t-entry.active{border-bottom:2px solid var(--acc)}
+.tab.t-dash.active{border-bottom:2px solid var(--a2)}
+.tab.t-cfg.active{border-bottom:2px solid var(--a4)}
+.ml{margin-left:auto;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:#3fb950;flex-shrink:0}
+.dot.warn{background:var(--a4)}.dot.err{background:var(--acc)}
+.sync-lbl{font-size:11px;color:var(--mu)}
+
+/* BUTTONS */
+.btn{padding:6px 13px;border-radius:6px;border:1px solid var(--bd);background:var(--sf2);
+  color:var(--tx);cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;
+  font-weight:500;display:inline-flex;align-items:center;gap:5px;
+  transition:.15s;white-space:nowrap}
+.btn:hover{background:var(--bd)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-g{background:#238636;border-color:#238636;color:#fff}.btn-g:hover:not(:disabled){background:#2ea043}
+.btn-b{background:#1f6feb;border-color:#1f6feb;color:#fff}.btn-b:hover{background:#388bfd}
+.btn-sm{padding:3px 9px;font-size:11px}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--mu)}
+.btn-ghost:hover{background:rgba(255,255,255,.06);color:var(--tx)}
+
+/* VIEWS */
+.view{display:none;padding:16px 20px}
+.view.active{display:block}
+
+/* ═══ ENTRY VIEW ════════════════════════════════════ */
+.entry-top{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.date-grp{display:flex;flex-direction:column;gap:3px}
+.lbl{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px}
+input[type=date]{background:var(--sf2);border:1px solid var(--bd);color:var(--tx);
+  padding:7px 11px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:14px;font-weight:600}
+input[type=date]:focus{outline:none;border-color:var(--a2)}
+.einfo{font-size:12px;color:var(--mu)}
+.eactions{margin-left:auto;display:flex;gap:8px}
+
+/* THE FORM TABLE */
+.form-wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:10px}
+.ftbl{width:100%;border-collapse:collapse;min-width:860px}
+.ftbl thead th{
+  background:var(--sf2);color:var(--mu);font-size:9px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;
+  text-align:center;border-bottom:1px solid var(--bd);white-space:nowrap;
+  position:sticky;top:52px;z-index:5}
+.ftbl thead th.lft{text-align:left}
+/* stage group header row */
+.stage-hdr-row td{
+  padding:6px 12px;font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;font-weight:700;letter-spacing:.4px;
+  border-top:2px solid var(--bd);border-bottom:1px solid var(--bd);
+  background:var(--sf2)}
+/* data rows */
+.ftbl tbody tr.data-row td{border-bottom:1px solid rgba(48,54,61,.45)}
+.ftbl tbody tr.data-row:last-of-type td{border-bottom:2px solid var(--bd)}
+.ftbl tbody tr.data-row:hover td{background:rgba(255,255,255,.025)}
+.ftbl tbody tr.data-row:nth-child(even) td{background:rgba(255,255,255,.012)}
+.person-td{padding:5px 12px !important;font-size:13px;font-weight:600;
+  color:var(--tx);white-space:nowrap;min-width:160px}
+/* inputs */
+.pi{width:100%;background:transparent;border:none;color:var(--tx);
+  font-family:'Barlow',sans-serif;font-size:13px;padding:5px 8px}
+.pi:focus{outline:none;background:rgba(121,192,255,.07);border-radius:4px}
+.pi::placeholder{color:rgba(139,148,158,.28)}
+.qi{width:70px;background:transparent;border:none;color:var(--tx);
+  font-family:'Barlow',sans-serif;font-size:13px;padding:5px 6px;text-align:center}
+.qi:focus{outline:none;background:rgba(121,192,255,.07);border-radius:4px}
+.qi::placeholder{color:rgba(139,148,158,.28)}
+/* stage total row */
+.stage-total-row td{
+  padding:4px 12px;font-size:11px;color:var(--mu);
+  background:var(--sf2);text-align:right;border-bottom:1px solid var(--bd)}
+
+/* ═══ CONFIG VIEW ════════════════════════════════════ */
+.cfg-intro{background:rgba(227,179,65,.07);border:1px solid rgba(227,179,65,.25);
+  border-radius:8px;padding:12px 16px;font-size:12px;color:var(--mu);
+  line-height:1.7;margin-bottom:16px}
+.cfg-intro b{color:var(--a4)}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.cfg-stage{background:var(--sf);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.cfg-stage-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--sf2);border-bottom:1px solid var(--bd)}
+.cfg-stage-name{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700}
+.cfg-body{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.cfg-person-row{display:flex;align-items:center;justify-content:space-between;
+  background:var(--sf2);border:1px solid var(--bd);border-radius:6px;
+  padding:6px 10px 6px 12px}
+.cfg-person-name{font-size:13px;font-weight:500}
+.cfg-add-row{display:flex;gap:6px;margin-top:4px}
+.cfg-add-row input{flex:1;background:var(--sf2);border:1px solid var(--bd);color:var(--tx);
+  padding:6px 10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:12px}
+.cfg-add-row input:focus{outline:none;border-color:var(--a3)}
+.cfg-footer{padding:16px 0 4px;display:flex;gap:10px;align-items:center}
+.cfg-save-note{font-size:11px;color:var(--mu)}
+
+/* ═══ DASHBOARD VIEW ═════════════════════════════════ */
+.filterbar{background:var(--sf);border:1px solid var(--bd);border-radius:10px;
+  padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;
+  align-items:flex-end;margin-bottom:14px}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fl{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px}
+select{background:var(--sf2);border:1px solid var(--bd);color:var(--tx);
+  padding:7px 10px;border-radius:6px;font-family:'Barlow',sans-serif;
+  font-size:13px;min-width:135px;cursor:pointer}
+select:focus{outline:none;border-color:var(--a2)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+  gap:10px;margin-bottom:14px}
+.kpi{background:var(--sf);border:1px solid var(--bd);border-radius:10px;
+  padding:13px 15px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--acc),var(--a2))}
+.kpi-l{font-size:10px;color:var(--mu);font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:3px}
+.kpi-v{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;line-height:1}
+.kpi-s{font-size:10px;color:var(--mu);margin-top:2px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:820px){.g2{grid-template-columns:1fr}}
+.panel{background:var(--sf);border:1px solid var(--bd);border-radius:10px;
+  overflow:hidden;margin-bottom:12px}
+.ph{padding:11px 15px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between}
+.pt{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700}
+.pb{padding:13px 15px}
+.ch{position:relative;height:200px}
+.tbl-w{overflow:auto;max-height:255px}
+.tbl-w::-webkit-scrollbar{width:3px;height:3px}
+.tbl-w::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--sf2);color:var(--mu);font-weight:700;font-size:10px;
+  text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;text-align:left;
+  position:sticky;top:0;border-bottom:1px solid var(--bd)}
+td{padding:7px 10px;border-bottom:1px solid rgba(48,54,61,.4);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+tr:last-child td{border-bottom:none}
+.mbar{height:5px;border-radius:3px;display:inline-block;min-width:2px;background:var(--acc)}
+.rk{width:20px;height:20px;border-radius:50%;background:var(--sf2);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:var(--mu)}
+.rk.r1{background:var(--a4);color:#000}
+.rk.r2{background:#8b949e;color:#000}
+.rk.r3{background:#c9773a;color:#fff}
+.empty{text-align:center;padding:32px;color:var(--mu);font-size:12px}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--sf);border:1px solid var(--bd);border-radius:12px;
+  padding:24px;width:440px;max-width:95vw}
+.modal h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;
+  font-weight:700;margin-bottom:14px}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--mu);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.field input{width:100%;background:var(--sf2);border:1px solid var(--bd);
+  color:var(--tx);padding:8px 11px;border-radius:6px;
+  font-family:'Barlow',sans-serif;font-size:13px}
+.field input:focus{outline:none;border-color:var(--a2)}
+.fn{font-size:11px;color:var(--mu);margin-top:3px;line-height:1.5}
+.mf{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+/* TOAST */
+.toast{position:fixed;bottom:18px;right:18px;background:var(--sf2);
+  border:1px solid var(--bd);border-radius:8px;padding:10px 16px;font-size:13px;
+  display:none;align-items:center;gap:8px;z-index:300;
+  box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.toast.show{display:flex}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">PROD<span>MGMT</span></div>
+  <div class="tabs">
+    <div class="tab t-entry active" onclick="showView('entry')">📋 Entry Form</div>
+    <div class="tab t-dash"         onclick="showView('dash')">📊 Dashboard</div>
+    <div class="tab t-cfg"          onclick="showView('cfg')">⚙ Edit Form Layout</div>
+  </div>
+  <div class="ml">
+    <div class="dot warn" id="syncDot"></div>
+    <span class="sync-lbl" id="syncLbl">Not configured</span>
+    <button class="btn" onclick="openModal()">🔗 Configure</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     ENTRY VIEW  — daily use, fast
+════════════════════════════════════════════════════ -->
+<div class="view active" id="view-entry">
+  <div class="entry-top">
+    <div class="date-grp">
+      <span class="lbl">Production Date</span>
+      <input type="date" id="entryDate">
+    </div>
+    <span class="einfo" id="eInfo"></span>
+    <div class="eactions">
+      <button class="btn" onclick="clearEntries()">✕ Clear</button>
+      <button class="btn btn-g" id="btnSub" onclick="submitForm()">▲ Submit to Database</button>
+    </div>
+  </div>
+  <div class="form-wrap">
+    <table class="ftbl" id="ftbl">
+      <thead>
+        <tr>
+          <th class="lft" style="width:160px">Person</th>
+          <th>Product 1</th><th style="width:72px">Qty</th>
+          <th>Product 2</th><th style="width:72px">Qty</th>
+          <th>Product 3</th><th style="width:72px">Qty</th>
+          <th>Product 4</th><th style="width:72px">Qty</th>
+          <th>Product 5</th><th style="width:72px">Qty</th>
+        </tr>
+      </thead>
+      <tbody id="ftbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     CONFIG VIEW  — used occasionally
+════════════════════════════════════════════════════ -->
+<div class="view" id="view-cfg">
+  <div class="cfg-intro">
+    <b>Form Layout Editor</b> — Use this to add or remove staff from each stage.<br>
+    Changes here update the Entry Form. Staff can appear in multiple stages.<br>
+    Click <b>Save Layout</b> when done — saves to GitHub so all users see the updated form.
+  </div>
+  <div class="cfg-grid" id="cfgGrid"></div>
+  <div class="cfg-footer">
+    <button class="btn btn-g" onclick="saveLayout()">💾 Save Layout to GitHub</button>
+    <span class="cfg-save-note" id="cfgSaveNote"></span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     DASHBOARD VIEW
+════════════════════════════════════════════════════ -->
+<div class="view" id="view-dash">
+  <div class="filterbar">
+    <div class="fg"><span class="fl">Month</span>
+      <select id="fMonth" onchange="applyF()"><option value="">All Months</option></select></div>
+    <div class="fg"><span class="fl">From</span>
+      <input type="date" id="fFrom" onchange="applyF()" style="min-width:0;width:136px"></div>
+    <div class="fg"><span class="fl">To</span>
+      <input type="date" id="fTo" onchange="applyF()" style="min-width:0;width:136px"></div>
+    <div class="fg"><span class="fl">Stage</span>
+      <select id="fStage" onchange="applyF()"><option value="">All Stages</option></select></div>
+    <div class="fg"><span class="fl">Person</span>
+      <select id="fPerson" onchange="applyF()"><option value="">All Persons</option></select></div>
+    <button class="btn" style="align-self:flex-end" onclick="clearF()">✕ Clear</button>
+    <button class="btn btn-b" style="align-self:flex-end" onclick="loadAll()">↻ Refresh</button>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">Total Qty</div><div class="kpi-v" id="kT">—</div><div class="kpi-s" id="kTs">—</div></div>
+    <div class="kpi"><div class="kpi-l">Active Days</div><div class="kpi-v" id="kD">—</div><div class="kpi-s">production days</div></div>
+    <div class="kpi"><div class="kpi-l">Avg / Day</div><div class="kpi-v" id="kA">—</div><div class="kpi-s">units per day</div></div>
+    <div class="kpi"><div class="kpi-l">Persons</div><div class="kpi-v" id="kP">—</div><div class="kpi-s">active in period</div></div>
+    <div class="kpi"><div class="kpi-l">SKUs</div><div class="kpi-v" id="kI">—</div><div class="kpi-s">unique products</div></div>
+  </div>
+  <div class="g2">
+    <div class="panel"><div class="ph"><span class="pt">📈 Monthly Trend</span></div>
+      <div class="pb"><div class="ch"><canvas id="cM"></canvas></div></div></div>
+    <div class="panel"><div class="ph"><span class="pt">🏭 Stage-wise</span></div>
+      <div class="pb"><div class="ch"><canvas id="cS"></canvas></div></div></div>
+  </div>
+  <div class="g2">
+    <div class="panel"><div class="ph"><span class="pt">👷 Person-wise</span></div>
+      <div class="tbl-w"><table id="tPer"><thead><tr><th>#</th><th>Person</th><th>Qty</th><th>Share</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="panel"><div class="ph"><span class="pt">📦 Item / SKU-wise</span></div>
+      <div class="tbl-w"><table id="tItm"><thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Share</th></tr></thead><tbody></tbody></table></div></div>
+  </div>
+  <div class="panel"><div class="ph"><span class="pt">🔀 Stage + Person Combined</span></div>
+    <div class="tbl-w"><table id="tSP"><thead><tr><th>Stage</th><th>Person</th><th>Qty</th><th>% of Stage</th><th style="width:120px">Bar</th></tr></thead><tbody></tbody></table></div></div>
+  <div class="panel"><div class="ph"><span class="pt">📅 Day-wise Log</span>
+    <span style="font-size:11px;color:var(--mu)" id="dCnt"></span></div>
+    <div class="tbl-w"><table id="tDay"><thead><tr><th>Date</th><th>Stage</th><th>Person</th><th>Product</th><th>Qty</th></tr></thead><tbody></tbody></table></div></div>
+</div>
+
+<!-- GITHUB CONFIG MODAL -->
+<div class="overlay" id="cfgOvl">
+  <div class="modal">
+    <h3>🔗 GitHub Configuration</h3>
+    <div class="field"><label>GitHub Username</label><input id="cUser" placeholder="your-username"></div>
+    <div class="field"><label>Repository Name</label><input id="cRepo" placeholder="production-dashboard"></div>
+    <div class="field"><label>Branch</label><input id="cBranch" value="main"></div>
+    <div class="field"><label>Personal Access Token</label>
+      <input id="cToken" type="password" placeholder="ghp_xxxxxxxxxxxx">
+      <div class="fn">GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained → Contents: Read &amp; Write. Stored in this browser only.</div>
+    </div>
+    <div class="mf">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-g" onclick="saveConfig()">Save &amp; Connect</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let CFG  = {user:'',repo:'',branch:'main',token:''};
+let DB   = [];
+let FLT  = [];
+
+// FORM_CONFIG: array of {stage, color, persons:[]}
+// This is what gets saved/loaded as form_config.json
+let FORM_CONFIG = [
+  {stage:'1 (Bottom)',       color:'#58a6ff',
+   persons:['KALUSHING','MAHESH','PRABHAT BHAI','BUDHAJI','DHARMESH BHAI','GANPAT','GOPAL','KETAN BHAI']},
+  {stage:'1 (CAP)',          color:'#79c0ff',
+   persons:['GANPAT','RAMESH','BUDHAJI','KETAN BHAI']},
+  {stage:'2 (Drill)',        color:'#56d364',
+   persons:['KIRAN','JAGDISH','VISHAL','PRABHAT BHAI','KETAN BHAI','BUDHAJI','SAHIL']},
+  {stage:'3 (Berrings)',     color:'#e3b341',
+   persons:['KETAN BHAI','PAVAN','JASHPAL','LAXMAN BHAI','FARUKH BHAI','SANDIP','BHAVIN','CHIRAG','GANPAT','MARUTI INDUSTRIES']},
+  {stage:'4 ( Grinding)',    color:'#f78166',
+   persons:['VANRAJ','DHAVAL']},
+  {stage:'5 ( Inspection)',  color:'#bc8cff',
+   persons:['DILIP']},
+  {stage:'6 (Paint)',        color:'#ff7b72',
+   persons:['PARESH','BHARAT','VANRAJ','CHIRAG']},
+  {stage:'Ring',             color:'#f0883e',
+   persons:['PRAKASH']},
+];
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('entryDate').value = todayStr();
+  const s = localStorage.getItem('prodCfg');
+  if (s) { CFG = JSON.parse(s); updateBadge(); loadAll(); }
+  else openModal();
+});
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+// ══════════════════════════════════════════════════════
+// VIEW SWITCHING
+// ══════════════════════════════════════════════════════
+function showView(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelector('.t-'+v).classList.add('active');
+  if(v==='dash') applyF();
+  if(v==='cfg')  buildCfgGrid();
+}
+
+// ══════════════════════════════════════════════════════
+// ENTRY FORM — BUILD & INTERACT
+// ══════════════════════════════════════════════════════
+function buildForm(){
+  const tbody = document.getElementById('ftbody');
+  let html = '';
+  FORM_CONFIG.forEach(({stage, color, persons}) => {
+    // Stage header row spanning all columns
+    html += `<tr class="stage-hdr-row">
+      <td colspan="11" style="color:${color}">${stage}</td>
+    </tr>`;
+    // One row per person — no duplicates
+    persons.forEach(person => {
+      html += `<tr class="data-row" data-stage="${esc(stage)}" data-person="${esc(person)}">
+        <td class="person-td">${person}</td>
+        ${[1,2,3,4,5].map(()=>
+          `<td><input class="pi" placeholder="Product" oninput="updateInfo()"></td>
+           <td><input class="qi" type="number" min="0" placeholder="" oninput="updateInfo()"></td>`
+        ).join('')}
+      </tr>`;
+    });
+    // Stage subtotal row
+    html += `<tr class="stage-total-row" id="st-${eid(stage)}">
+      <td colspan="11">— fill entries above —</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+  updateInfo();
+}
+
+function esc(s){ return s.replace(/[&"<>]/g,c=>({'&':'&amp;','"':'&quot;','<':'&lt;','>':'&gt;'}[c])); }
+function eid(s){ return s.replace(/[^a-zA-Z0-9]/g,'_'); }
+
+function clearEntries(){
+  document.querySelectorAll('#ftbody .pi, #ftbody .qi').forEach(i=>i.value='');
+  document.getElementById('entryDate').value = todayStr();
+  updateInfo();
+}
+
+function updateInfo(){
+  let count=0, totalQty=0;
+  document.querySelectorAll('#ftbody .data-row').forEach(tr=>{
+    const pInps = tr.querySelectorAll('.pi');
+    const qInps = tr.querySelectorAll('.qi');
+    pInps.forEach((pi,i)=>{ if(pi.value.trim()&&parseFloat(qInps[i]?.value)>0) count++; });
+    qInps.forEach(qi=>{ totalQty+=parseFloat(qi.value)||0; });
+  });
+  document.getElementById('eInfo').textContent =
+    count ? `${count} entr${count===1?'y':'ies'} · ${n(totalQty)} units total` : '';
+
+  // Update per-stage subtotals
+  FORM_CONFIG.forEach(({stage})=>{
+    let stageQty=0;
+    document.querySelectorAll(`#ftbody .data-row[data-stage="${esc(stage)}"]`).forEach(tr=>{
+      tr.querySelectorAll('.qi').forEach(qi=>{ stageQty+=parseFloat(qi.value)||0; });
+    });
+    const el = document.getElementById('st-'+eid(stage));
+    if(el) el.querySelector('td').textContent =
+      stageQty>0 ? `Stage total: ${n(stageQty)} units` : '— fill entries above —';
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// SUBMIT
+// ══════════════════════════════════════════════════════
+async function submitForm(){
+  if(!CFG.token){ openModal(); return; }
+  const dateVal = document.getElementById('entryDate').value;
+  if(!dateVal){ toast('Enter production date first','#f78166'); return; }
+
+  const newRecs = [];
+  document.querySelectorAll('#ftbody .data-row').forEach(tr=>{
+    const stage  = tr.dataset.stage;
+    const person = tr.dataset.person;
+    const pInps  = tr.querySelectorAll('.pi');
+    const qInps  = tr.querySelectorAll('.qi');
+    pInps.forEach((pi,i)=>{
+      const prod = pi.value.trim();
+      const qty  = parseFloat(qInps[i]?.value)||0;
+      if(prod && qty>0) newRecs.push({date:dateVal, stage, person, item:prod, quantity:qty});
+    });
+  });
+
+  if(!newRecs.length){ toast('Fill at least one Product + Qty','#f78166'); return; }
+
+  const hasDup = DB.some(r=>r.date===dateVal);
+  if(hasDup && !confirm(`Records for ${dateVal} already exist.\nAppend anyway?`)) return;
+
+  busy(true);
+  const all = [...DB, ...newRecs];
+  const ok  = await ghPush('production_data.json',
+    {synced_at:new Date().toLocaleString('en-IN'), total:all.length, records:all});
+  busy(false);
+  if(ok){
+    DB = all;
+    toast(`✓ ${newRecs.length} records saved`, '#56d364');
+    clearEntries();
+    buildFilterOpts();
+  }
+}
+
+function busy(on){
+  const b=document.getElementById('btnSub');
+  b.textContent=on?'⟳ Saving…':'▲ Submit to Database';
+  b.disabled=on;
+}
+
+// ══════════════════════════════════════════════════════
+// FORM LAYOUT CONFIG VIEW
+// ══════════════════════════════════════════════════════
+function buildCfgGrid(){
+  const grid = document.getElementById('cfgGrid');
+  grid.innerHTML = FORM_CONFIG.map(({stage,color,persons},si) => `
+    <div class="cfg-stage">
+      <div class="cfg-stage-hdr">
+        <span class="cfg-stage-name" style="color:${color}">${stage}</span>
+        <span style="font-size:11px;color:var(--mu)">${persons.length} person${persons.length!==1?'s':''}</span>
+      </div>
+      <div class="cfg-body" id="cpb-${si}">
+        ${persons.map((p,pi)=>`
+          <div class="cfg-person-row" id="cpr-${si}-${pi}">
+            <span class="cfg-person-name">${p}</span>
+            <button class="btn btn-ghost btn-sm" onclick="removePerson(${si},${pi})" title="Remove">✕</button>
+          </div>`).join('')}
+        <div class="cfg-add-row">
+          <input id="cadd-${si}" placeholder="Add person name…"
+            onkeydown="if(event.key==='Enter')addPerson(${si})">
+          <button class="btn btn-sm btn-g" onclick="addPerson(${si})">＋</button>
+        </div>
+      </div>
+    </div>`).join('');
+  document.getElementById('cfgSaveNote').textContent='';
+}
+
+function addPerson(si){
+  const inp  = document.getElementById(`cadd-${si}`);
+  const name = inp.value.trim().toUpperCase();
+  if(!name) return;
+  if(FORM_CONFIG[si].persons.includes(name)){
+    toast(name+' already in this stage','#e3b341'); return;
+  }
+  FORM_CONFIG[si].persons.push(name);
+  inp.value='';
+  buildCfgGrid();
+  document.getElementById(`cfgSaveNote`).textContent='● Unsaved changes';
+}
+
+function removePerson(si, pi){
+  const name = FORM_CONFIG[si].persons[pi];
+  if(!confirm(`Remove "${name}" from ${FORM_CONFIG[si].stage}?`)) return;
+  FORM_CONFIG[si].persons.splice(pi,1);
+  buildCfgGrid();
+  document.getElementById('cfgSaveNote').textContent='● Unsaved changes';
+}
+
+async function saveLayout(){
+  busy2(true);
+  const ok = await ghPush('form_config.json',
+    {updated_at:new Date().toLocaleString('en-IN'), stages:FORM_CONFIG});
+  busy2(false);
+  if(ok){
+    buildForm();   // re-render entry form immediately
+    document.getElementById('cfgSaveNote').textContent='✓ Saved — Entry Form updated';
+    toast('Layout saved & Entry Form updated','#56d364');
+  }
+}
+
+function busy2(on){
+  document.querySelector('.cfg-footer .btn-g').disabled=on;
+  document.querySelector('.cfg-footer .btn-g').textContent=on?'⟳ Saving…':'💾 Save Layout to GitHub';
+}
+
+// ══════════════════════════════════════════════════════
+// GITHUB R/W
+// ══════════════════════════════════════════════════════
+function ghHdr(){
+  return{'Authorization':`Bearer ${CFG.token}`,'Accept':'application/vnd.github+json',
+    'Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'};
+}
+function apiUrl(f){ return `https://api.github.com/repos/${CFG.user}/${CFG.repo}/contents/${f}`; }
+function rawUrl(f){ return `https://raw.githubusercontent.com/${CFG.user}/${CFG.repo}/${CFG.branch}/${f}?t=${Date.now()}`; }
+
+async function ghPush(file, data){
+  const payload = JSON.stringify(data,null,2);
+  const b64 = btoa(unescape(encodeURIComponent(payload)));
+  let sha;
+  try{ const g=await fetch(apiUrl(file),{headers:ghHdr()}); if(g.ok){const j=await g.json();sha=j.sha;} }catch(e){}
+  const body={message:`Update ${file}`,content:b64,branch:CFG.branch};
+  if(sha) body.sha=sha;
+  try{
+    const r=await fetch(apiUrl(file),{method:'PUT',headers:ghHdr(),body:JSON.stringify(body)});
+    if(r.ok) return true;
+    const err=await r.json(); toast('GitHub: '+(err.message||'error'),'#f78166'); return false;
+  }catch(e){ toast('Network error','#f78166'); return false; }
+}
+
+async function ghRead(f){
+  try{
+    const r=await fetch(rawUrl(f));
+    return r.ok ? await r.json() : null;
+  }catch(e){ return null; }
+}
+
+async function loadAll(){
+  if(!CFG.user||!CFG.repo) return;
+  updateBadge('loading');
+
+  // Load form config
+  const fc = await ghRead('form_config.json');
+  if(fc?.stages?.length) FORM_CONFIG=fc.stages;
+  buildForm();
+
+  // Load production data
+  const j = await ghRead('production_data.json');
+  if(j){ DB=(j.records||j||[]).map(norm); }
+  else { DB=[]; }
+
+  buildFilterOpts();
+  applyF();
+  updateBadge('ok', j?.synced_at||'');
+  if(DB.length) toast(`✓ ${DB.length} records loaded`,'#56d364');
+}
+
+function norm(d){
+  let date=d.date||'';
+  if(typeof date==='number') date=new Date(Math.round((date-25569)*86400000)).toISOString().slice(0,10);
+  if(date.length>10) date=date.slice(0,10);
+  return{date,stage:String(d.stage||''),person:String(d.person||''),
+    item:String(d.item||d.product||''),quantity:Number(d.quantity||0)};
+}
+
+// ══════════════════════════════════════════════════════
+// FILTERS
+// ══════════════════════════════════════════════════════
+function buildFilterOpts(){
+  const months =[...new Set(DB.map(d=>d.date.slice(0,7)))].sort().reverse();
+  const stages =[...new Set(DB.map(d=>d.stage))].filter(Boolean).sort();
+  const persons=[...new Set(DB.map(d=>d.person))].filter(Boolean).sort();
+  pop('fMonth', months, m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleString('en-IN',{month:'long',year:'numeric'})});
+  pop('fStage', stages);
+  pop('fPerson',persons);
+}
+function pop(id,arr,lFn){
+  const sel=document.getElementById(id),cur=sel.value;
+  while(sel.options.length>1)sel.remove(1);
+  arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.text=lFn?lFn(v):v;sel.appendChild(o);});
+  if([...sel.options].some(o=>o.value===cur))sel.value=cur;
+}
+function applyF(){
+  const fM=document.getElementById('fMonth').value;
+  const fF=document.getElementById('fFrom').value;
+  const fT=document.getElementById('fTo').value;
+  const fS=document.getElementById('fStage').value;
+  const fP=document.getElementById('fPerson').value;
+  FLT=DB.filter(d=>{
+    if(fM&&!d.date.startsWith(fM))return false;
+    if(fF&&d.date<fF)return false;
+    if(fT&&d.date>fT)return false;
+    if(fS&&d.stage!==fS)return false;
+    if(fP&&d.person!==fP)return false;
+    return true;
+  });
+  renderDash();
+}
+function clearF(){
+  ['fMonth','fStage','fPerson'].forEach(id=>document.getElementById(id).value='');
+  ['fFrom','fTo'].forEach(id=>document.getElementById(id).value='');
+  applyF();
+}
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════
+let cMc,cSc;
+function renderDash(){renderKPIs();renderMonthly();renderStageChart();renderPerTbl();renderItmTbl();renderSPTbl();renderDayTbl();}
+
+function renderKPIs(){
+  const total=FLT.reduce((s,d)=>s+d.quantity,0);
+  const days=new Set(FLT.map(d=>d.date)).size;
+  sv('kT',n(total));sv('kTs',FLT.length+' entries');
+  sv('kD',n(days));sv('kA',n(days?Math.round(total/days):0));
+  sv('kP',n(new Set(FLT.map(d=>d.person)).size));
+  sv('kI',n(new Set(FLT.map(d=>d.item)).size));
+}
+function renderMonthly(){
+  const map={};FLT.forEach(d=>{const m=d.date.slice(0,7);map[m]=(map[m]||0)+d.quantity;});
+  const keys=Object.keys(map).sort(),vals=keys.map(k=>map[k]);
+  const lbls=keys.map(k=>{const[y,mo]=k.split('-');return new Date(y,mo-1).toLocaleString('en-IN',{month:'short',year:'2-digit'})});
+  const ctx=document.getElementById('cM').getContext('2d');
+  if(cMc)cMc.destroy();
+  cMc=new Chart(ctx,{type:'bar',data:{labels:lbls,datasets:[{data:vals,backgroundColor:'rgba(121,192,255,.65)',borderColor:'#79c0ff',borderWidth:1,borderRadius:4}]},options:cOpts()});
+}
+function renderStageChart(){
+  const map={};FLT.forEach(d=>{map[d.stage]=(map[d.stage]||0)+d.quantity;});
+  const entries=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const ctx=document.getElementById('cS').getContext('2d');
+  if(cSc)cSc.destroy();
+  cSc=new Chart(ctx,{type:'bar',data:{labels:entries.map(e=>e[0]),
+    datasets:[{data:entries.map(e=>e[1]),backgroundColor:entries.map(e=>stageColor(e[0])),borderRadius:4,borderWidth:0}]},
+    options:{...cOpts(),indexAxis:'y'}});
+}
+function renderPerTbl(){
+  const map={};FLT.forEach(d=>{map[d.person]=(map[d.person]||0)+d.quantity;});
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const total=sorted.reduce((s,e)=>s+e[1],0)||1,maxQ=sorted[0]?.[1]||1;
+  const tbody=document.querySelector('#tPer tbody');
+  if(!sorted.length){tbody.innerHTML='<tr><td colspan="4" class="empty">No data</td></tr>';return;}
+  tbody.innerHTML=sorted.map(([p,q],i)=>`<tr>
+    <td><span class="rk ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
+    <td><b>${p}</b></td><td><b>${n(q)}</b></td>
+    <td><span class="mbar" style="width:${Math.round(q/maxQ*80)}px"></span> ${pct(q,total)}</td></tr>`).join('');
+}
+function renderItmTbl(){
+  const map={};FLT.forEach(d=>{map[d.item]=(map[d.item]||0)+d.quantity;});
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const total=sorted.reduce((s,e)=>s+e[1],0)||1,maxQ=sorted[0]?.[1]||1;
+  const tbody=document.querySelector('#tItm tbody');
+  if(!sorted.length){tbody.innerHTML='<tr><td colspan="4" class="empty">No data</td></tr>';return;}
+  tbody.innerHTML=sorted.map(([item,q],i)=>`<tr>
+    <td><span class="rk ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
+    <td><b>${item}</b></td><td><b>${n(q)}</b></td>
+    <td><span class="mbar" style="width:${Math.round(q/maxQ*80)}px;background:var(--a4)"></span> ${pct(q,total)}</td></tr>`).join('');
+}
+function renderSPTbl(){
+  const map={},stTot={};
+  FLT.forEach(d=>{const k=d.stage+'|||'+d.person;map[k]=(map[k]||0)+d.quantity;stTot[d.stage]=(stTot[d.stage]||0)+d.quantity;});
+  const rows=Object.entries(map).map(([k,q])=>{const[s,p]=k.split('|||');return{s,p,q};}).sort((a,b)=>a.s.localeCompare(b.s)||b.q-a.q);
+  const tbody=document.querySelector('#tSP tbody');
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="5" class="empty">No data</td></tr>';return;}
+  let lastS='';
+  tbody.innerHTML=rows.map(({s,p,q})=>{
+    const sc=s!==lastS?`<td><span style="color:${stageColor(s)};font-weight:700">${s}</span></td>`:'<td style="color:var(--mu);font-size:10px">└</td>';
+    lastS=s;
+    return`<tr>${sc}<td>${p}</td><td><b>${n(q)}</b></td><td style="color:var(--mu)">${pct(q,stTot[s]||1)}</td>
+      <td><span class="mbar" style="width:${Math.round(q/(stTot[s]||1)*110)}px;background:${stageColor(s)}"></span></td></tr>`;
+  }).join('');
+}
+function renderDayTbl(){
+  const sorted=[...FLT].sort((a,b)=>b.date.localeCompare(a.date));
+  sv('dCnt',sorted.length+' entries');
+  const tbody=document.querySelector('#tDay tbody');
+  if(!sorted.length){tbody.innerHTML='<tr><td colspan="5" class="empty">No entries</td></tr>';return;}
+  tbody.innerHTML=sorted.slice(0,600).map(d=>`<tr>
+    <td style="white-space:nowrap">${fmtD(d.date)}</td>
+    <td><span style="color:${stageColor(d.stage)}">●</span> ${d.stage}</td>
+    <td>${d.person}</td><td>${d.item}</td><td><b>${n(d.quantity)}</b></td></tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// MODAL / CONFIG
+// ══════════════════════════════════════════════════════
+function openModal(){
+  document.getElementById('cUser').value  =CFG.user;
+  document.getElementById('cRepo').value  =CFG.repo;
+  document.getElementById('cBranch').value=CFG.branch||'main';
+  document.getElementById('cToken').value =CFG.token;
+  document.getElementById('cfgOvl').classList.add('open');
+}
+function closeModal(){ document.getElementById('cfgOvl').classList.remove('open'); }
+function saveConfig(){
+  CFG.user  =document.getElementById('cUser').value.trim();
+  CFG.repo  =document.getElementById('cRepo').value.trim();
+  CFG.branch=document.getElementById('cBranch').value.trim()||'main';
+  CFG.token =document.getElementById('cToken').value.trim();
+  if(!CFG.user||!CFG.repo){ toast('Enter username and repo','#f78166'); return; }
+  localStorage.setItem('prodCfg',JSON.stringify(CFG));
+  closeModal(); updateBadge(); loadAll();
+}
+function updateBadge(state,ts){
+  const dot=document.getElementById('syncDot'),lbl=document.getElementById('syncLbl');
+  if(state==='loading'){dot.className='dot warn';lbl.textContent='Loading…';return;}
+  if(state==='err'){dot.className='dot err';lbl.textContent='Error';return;}
+  if(!CFG.user){dot.className='dot warn';lbl.textContent='Not configured';return;}
+  dot.className='dot';lbl.textContent=ts?'Synced: '+ts:CFG.user+'/'+CFG.repo;
+}
+
+// ══════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════
+function stageColor(s){
+  const m={'1 (bottom)':'#58a6ff','1 (cap)':'#79c0ff','2 (drill)':'#56d364',
+    '3 (berrings)':'#e3b341','4 ( grinding)':'#f78166',
+    '5 ( inspection)':'#bc8cff','6 (paint)':'#ff7b72','ring':'#f0883e'};
+  return m[(s||'').toLowerCase().trim()]||'#8b949e';
+}
+function cOpts(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+  tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',
+    bodyColor:'#8b949e',callbacks:{label:c=>` ${n(c.raw)} units`}}},
+  scales:{x:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{size:10}}},
+          y:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{size:10}}}}};}
+function sv(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function n(v){return Number(v).toLocaleString('en-IN');}
+function pct(v,t){return t?Math.round(v/t*100)+'%':'0%';}
+function fmtD(s){if(!s)return'';return new Date(s+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function toast(msg,color='#56d364'){
+  const t=document.getElementById('toast');
+  t.innerHTML=`<span style="color:${color};font-size:14px">●</span> ${msg}`;
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+</body>
+</html>
