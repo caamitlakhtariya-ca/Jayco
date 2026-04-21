@@ -25,12 +25,13 @@ body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;font-si
 .logo span{color:#f39c12}
 .tabs{display:flex;gap:2px;margin-left:16px}
 .tab{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;
-  color:rgba(255,255,255,.6);transition:.15s;white-space:nowrap}
+  color:rgba(255,255,255,.6);transition:.15s;white-space:nowrap; display:none;} /* Hidden by default for Role routing */
 .tab:hover{color:#fff;background:rgba(255,255,255,.1)}
-.tab.active{color:#fff;font-weight:700}
+.tab.active{color:#fff;font-weight:700; display:block;}
 .tab.t-entry.active{background:var(--acc);border-radius:6px}
 .tab.t-dash.active{background:var(--a2)}
 .tab.t-cfg.active{background:var(--a4)}
+.tab.t-vendor.active{background:var(--a5)}
 .ml{margin-left:auto;display:flex;align-items:center;gap:8px}
 .dot{width:7px;height:7px;border-radius:50%;background:#2ecc71}
 .dot.warn{background:#f39c12}.dot.err{background:#e74c3c}
@@ -43,6 +44,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;font-si
 .btn-g{background:var(--a3);border-color:var(--a3);color:#fff}.btn-g:hover:not(:disabled){background:#219a52}
 .btn-b{background:var(--a2);border-color:var(--a2);color:#fff}.btn-b:hover{background:#1f6fa3}
 .btn-r{background:var(--acc);border-color:var(--acc);color:#fff}.btn-r:hover{background:#a93226}
+.btn-p{background:var(--a5);border-color:var(--a5);color:#fff}.btn-p:hover{background:#5b2c6f}
 .btn-sm{padding:3px 8px;font-size:11px}
 .btn-icon{padding:3px 6px;font-size:12px;background:transparent;border:none;
   cursor:pointer;color:var(--mu);border-radius:4px;transition:.15s}
@@ -173,10 +175,11 @@ table.dt tr:last-child td{border-bottom:none}
   font-size:13px;padding:2px 5px;border-radius:3px;transition:.15s;line-height:1}
 .del-btn:hover{background:#fee2e2;color:var(--acc)}
 
-/* MODAL */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
-  z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+/* MODALS (Config & Login) */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+  z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .overlay.open{display:flex}
+.overlay.login{z-index:300; background:#0f172a;} /* Dark background for login */
 .modal{background:#fff;border:1px solid var(--bd);border-radius:14px;
   padding:24px;width:460px;max-width:95vw;box-shadow:0 20px 40px rgba(0,0,0,.12)}
 .modal h3{font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px}
@@ -189,14 +192,13 @@ table.dt tr:last-child td{border-bottom:none}
 .field input:focus{outline:none;border-color:var(--a2);box-shadow:0 0 0 3px rgba(41,128,185,.12)}
 .fn{font-size:11px;color:var(--mu);margin-top:3px;line-height:1.5}
 .mf{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
-.step-badge{display:inline-flex;width:20px;height:20px;border-radius:50%;
-  background:var(--a2);color:#fff;font-size:10px;font-weight:700;
-  align-items:center;justify-content:center;margin-right:6px;flex-shrink:0}
+.login-err{color:#e74c3c;font-size:12px;margin-bottom:8px;display:none;}
+.login-err.show{display:block;}
 
 /* TOAST */
 .toast{position:fixed;bottom:18px;right:18px;background:#fff;
   border:1px solid var(--bd);border-radius:8px;padding:10px 14px;font-size:12px;
-  font-weight:500;display:none;align-items:center;gap:8px;z-index:300;
+  font-weight:500;display:none;align-items:center;gap:8px;z-index:400;
   box-shadow:0 8px 24px rgba(0,0,0,.1)}
 .toast.show{display:flex}
 </style>
@@ -206,21 +208,43 @@ table.dt tr:last-child td{border-bottom:none}
 <div class="topbar">
   <div class="logo">Jayco <span>Prod</span></div>
   <div class="tabs">
-    <div class="tab t-entry active" onclick="showView('entry')">📋 Entry Form</div>
-    <div class="tab t-dash"         onclick="showView('dash')">📊 Dashboard</div>
-    <div class="tab t-cfg"          onclick="showView('cfg')">⚙ Edit Form Layout</div>
+    <div class="tab t-entry role-prod role-admin" onclick="showView('entry')">📋 Entry Form</div>
+    <div class="tab t-dash role-prod role-admin"  onclick="showView('dash')">📊 Dashboard</div>
+    <div class="tab t-cfg role-admin"           onclick="showView('cfg')">⚙ Edit Form Layout</div>
+    <div class="tab t-vendor role-acc role-admin" onclick="showView('vendor')">👥 Vendor Master</div>
   </div>
   <div class="ml">
     <div class="dot warn" id="syncDot"></div>
     <span class="sync-lbl" id="syncLbl">Not configured</span>
-    <button class="btn" style="font-size:11px;color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)" onclick="openModal()">🔗 Configure</button>
+    <span id="uNm" style="margin-left:12px;font-size:12px;font-weight:600;color:#fff;"></span>
+    <button class="btn btn-icon" style="color:#fff;" onclick="doLogout()" title="Logout" id="btnLogout" style="display:none;">⎋</button>
+    <button class="btn" style="font-size:11px;color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2);margin-left:8px;" onclick="openConfigModal()">🔗 Configure</button>
   </div>
 </div>
 
-<!-- ════════════ ENTRY VIEW ════════════ -->
-<div class="view active" id="view-entry">
+<div class="overlay login" id="loginOvl">
+  <div class="modal">
+    <h3 style="color:var(--tx)">Welcome to Jayco 👋</h3>
+    <div class="modal-sub">Sign in to your workspace</div>
+    <div class="login-err" id="lErr">Invalid credentials</div>
+    
+    <div class="field">
+      <label>User ID</label>
+      <input id="lId" placeholder="admin, acc, or prod" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="lPwd" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="mf">
+      <button class="btn btn-b" style="width:100%;justify-content:center" onclick="doLogin()" id="lBtn">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-entry">
   <div class="not-cfg" id="notCfgBanner">
-    ⚠ App not configured yet. <button class="btn btn-b btn-sm" onclick="openModal()" style="margin-left:8px">Configure Now</button>
+    ⚠ App not configured yet. <button class="btn btn-b btn-sm" onclick="openConfigModal()" style="margin-left:8px">Configure Now</button>
   </div>
   <div class="entry-toolbar">
     <div class="date-grp">
@@ -251,7 +275,6 @@ table.dt tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-<!-- ════════════ CONFIG VIEW ════════════ -->
 <div class="view" id="view-cfg">
   <div class="cfg-intro">
     <b>Form Layout Editor</b> — Add or remove staff per stage. One person can appear in multiple stages.
@@ -264,7 +287,6 @@ table.dt tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-<!-- ════════════ DASHBOARD VIEW ════════════ -->
 <div class="view" id="view-dash">
   <div class="filterbar">
     <div class="fg"><span class="fl">Month</span>
@@ -317,24 +339,45 @@ table.dt tr:last-child td{border-bottom:none}
       <tbody></tbody></table></div></div>
 </div>
 
-<!-- CONFIG MODAL -->
-<div class="overlay" id="cfgOvl">
-  <div class="modal">
-    <h3>🔗 Connect to Google Sheets</h3>
-    <div class="modal-sub">
-      Paste your Google Apps Script Web App URL below.<br>
-      <span style="color:var(--a2);font-weight:600">First time? See the SETUP guide in your GitHub repo.</span>
-    </div>
-    <div class="field">
-      <label>Apps Script Web App URL</label>
-      <input id="cUrl" placeholder="https://script.google.com/macros/s/.../exec">
-      <div class="fn">
-        Google Sheets → Extensions → Apps Script → Deploy → New deployment →
-        Web app → Execute as: Me → Who has access: Anyone → Deploy → Copy URL
+<div class="view" id="view-vendor">
+  <div class="panel" style="max-width:500px; margin: 20px auto;">
+    <div class="ph"><span class="pt">👥 Register New Vendor</span></div>
+    <div class="pb" style="padding:20px;">
+      <div class="field">
+        <label>GSTIN</label>
+        <input id="vGstin" placeholder="24XXXXX1234X1ZX" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="field">
+        <label>Vendor Name</label>
+        <input id="vName" placeholder="e.g. ABC Enterprises">
+      </div>
+      <div class="field">
+        <label>Credit Period (Days)</label>
+        <input type="number" id="vCredit" placeholder="30">
+      </div>
+      <div style="margin-top:20px">
+        <button class="btn btn-p" style="width:100%;justify-content:center" id="btnSaveVendor" onclick="saveVendor()">Save Vendor</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="cfgOvl">
+  <div class="modal">
+    <h3>🔗 System Configuration</h3>
+    <div class="modal-sub">
+      Set up your backend APIs.
+    </div>
+    <div class="field">
+      <label>Production API URL (Sheet 1)</label>
+      <input id="cUrlProd" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="field">
+      <label>Vendor API URL (Sheet 2)</label>
+      <input id="cUrlVendor" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
     <div class="mf">
-      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="closeConfigModal()">Cancel</button>
       <button class="btn btn-g" onclick="saveConfig()">Save &amp; Connect</button>
     </div>
   </div>
@@ -344,9 +387,10 @@ table.dt tr:last-child td{border-bottom:none}
 
 <script>
 // ══════════════════════════════════════════════════════
-// STATE
+// STATE & CONFIG
 // ══════════════════════════════════════════════════════
-let CFG = {url:''};
+let CFG = {prodUrl:'', vendorUrl:''};
+let CU = null; // Current logged-in user
 let DB  = [], FLT = [], DB_LOADED = false;
 
 let FORM_CONFIG = [
@@ -365,18 +409,152 @@ let FORM_CONFIG = [
 // ══════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('entryDate').value = todayStr();
+  
   const s = localStorage.getItem('jaycoCfg');
   if (s) { CFG = JSON.parse(s); }
-  if (!CFG.url) {
-    document.getElementById('notCfgBanner').classList.add('show');
-    document.getElementById('btnSub').disabled = true;
-    buildForm(); // build with defaults
+  
+  // Start up logic
+  if (!CFG.prodUrl || !CFG.vendorUrl) {
+    // Missing setup -> open config immediately
+    document.getElementById('cfgOvl').classList.add('open');
   } else {
-    updateBadge('loading');
-    loadAll();
+    // Configured -> show login
+    document.getElementById('loginOvl').classList.add('open');
   }
+  
+  buildForm(); // build with defaults in background
 });
+
 function todayStr() { return new Date().toISOString().slice(0,10); }
+
+// ══════════════════════════════════════════════════════
+// SECURITY & LOGIN
+// ══════════════════════════════════════════════════════
+async function hashPassword(password) {
+    const msgBuffer = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function doLogin() {
+    const uid = document.getElementById('lId').value.trim();
+    const pwd = document.getElementById('lPwd').value;
+    const btn = document.getElementById('lBtn');
+    const err = document.getElementById('lErr');
+
+    if (!uid || !pwd) { 
+        err.textContent = "Enter User ID and Password.";
+        err.classList.add('show'); 
+        return; 
+    }
+
+    btn.disabled = true; 
+    btn.textContent = "Authenticating...";
+    err.classList.remove('show');
+
+    const hashedPwd = await hashPassword(pwd);
+
+    try {
+        // --- Local Simulation for immediate UI testing based on ID ---
+        // (Will integrate with Vendor API in Phase 2)
+        let role = 'Production'; // Default
+        if (uid.toLowerCase().includes('admin')) role = 'Admin';
+        if (uid.toLowerCase().includes('acc')) role = 'Accounts';
+        
+        // Simulate network delay
+        await new Promise(r => setTimeout(r, 600));
+
+        processLogin({ uid: uid, name: uid.toUpperCase(), role: role });
+        
+    } catch (e) {
+        err.textContent = "Connection failed.";
+        err.classList.add('show');
+    }
+    btn.disabled = false; 
+    btn.textContent = "Sign In";
+}
+
+function processLogin(user) {
+    CU = user;
+    document.getElementById('loginOvl').classList.remove('open');
+    document.getElementById('btnLogout').style.display = 'inline-flex';
+    document.getElementById('uNm').textContent = CU.name;
+
+    // Apply Role-Based Display Logic
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    
+    let defaultTab = '';
+    if (CU.role === 'Admin') {
+        document.querySelectorAll('.role-admin').forEach(n => n.style.display = 'block');
+        defaultTab = 'vendor';
+    } else if (CU.role === 'Accounts') {
+        document.querySelectorAll('.role-acc').forEach(n => n.style.display = 'block');
+        defaultTab = 'vendor';
+    } else { // Production
+        document.querySelectorAll('.role-prod').forEach(n => n.style.display = 'block');
+        defaultTab = 'entry';
+    }
+
+    // Launch data load for production sheets if applicable
+    if (CU.role === 'Admin' || CU.role === 'Production') {
+        updateBadge('loading');
+        loadAll();
+    } else {
+        updateBadge('ok'); // Accounts doesn't need to load prod data immediately
+        document.getElementById('notCfgBanner').classList.remove('show');
+    }
+
+    showView(defaultTab);
+}
+
+function doLogout() {
+    CU = null;
+    document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
+    document.getElementById('btnLogout').style.display = 'none';
+    document.getElementById('uNm').textContent = '';
+    document.getElementById('loginOvl').classList.add('open');
+    document.getElementById('lPwd').value = '';
+}
+
+// ══════════════════════════════════════════════════════
+// VENDOR LOGIC
+// ══════════════════════════════════════════════════════
+async function saveVendor() {
+    const gstin = document.getElementById('vGstin').value.trim();
+    const name = document.getElementById('vName').value.trim();
+    const credit = document.getElementById('vCredit').value.trim();
+    const btn = document.getElementById('btnSaveVendor');
+
+    if (!gstin || !name) { toast("GSTIN and Vendor Name are required.", "#e74c3c"); return; }
+
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+    updateBadge('loading');
+
+    try {
+        const payload = {
+            action: 'addVendor',
+            gstin: gstin,
+            name: name,
+            credit: credit,
+            addedBy: CU.name
+        };
+        
+        // Simulated POST to Vendor URL (CFG.vendorUrl)
+        await new Promise(r => setTimeout(r, 800));
+        
+        toast(`Vendor ${name} Saved Successfully!`, '#27ae60');
+        ['vGstin','vName','vCredit'].forEach(id => document.getElementById(id).value = '');
+
+    } catch(e) {
+        toast("Failed to save vendor.", "#c0392b");
+    }
+
+    btn.disabled = false;
+    btn.textContent = "Save Vendor";
+    updateBadge('ok');
+}
 
 // ══════════════════════════════════════════════════════
 // VIEWS
@@ -384,8 +562,13 @@ function todayStr() { return new Date().toISOString().slice(0,10); }
 function showView(v) {
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
-  document.getElementById('view-'+v).classList.add('active');
-  document.querySelector('.t-'+v).classList.add('active');
+  
+  const targetView = document.getElementById('view-'+v);
+  const targetTab = document.querySelector('.t-'+v);
+  
+  if(targetView) targetView.classList.add('active');
+  if(targetTab) targetTab.classList.add('active');
+  
   if (v==='dash') applyF();
   if (v==='cfg')  buildCfgGrid();
 }
@@ -394,13 +577,13 @@ function showView(v) {
 // GOOGLE SHEETS API (via Apps Script)
 // ══════════════════════════════════════════════════════
 async function gsGet(action) {
-  const r = await fetch(`${CFG.url}?action=${action}&t=${Date.now()}`);
+  const r = await fetch(`${CFG.prodUrl}?action=${action}&t=${Date.now()}`);
   if (!r.ok) throw new Error('HTTP '+r.status);
   return await r.json();
 }
 
 async function gsPost(payload) {
-  const r = await fetch(CFG.url, {
+  const r = await fetch(CFG.prodUrl, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify(payload),
@@ -414,7 +597,7 @@ async function gsPost(payload) {
 // LOAD ALL DATA
 // ══════════════════════════════════════════════════════
 async function loadAll() {
-  if (!CFG.url) return;
+  if (!CFG.prodUrl) return;
   DB_LOADED = false;
   setBtnState(false, '⟳ Loading…');
   updateBadge('loading');
@@ -528,7 +711,7 @@ function updateInfo() {
 // SUBMIT
 // ══════════════════════════════════════════════════════
 async function submitForm() {
-  if (!CFG.url) { openModal(); return; }
+  if (!CFG.prodUrl) { openConfigModal(); return; }
   if (!DB_LOADED) { toast('⏳ Still loading — please wait a moment','#d68910'); return; }
   const dateVal = document.getElementById('entryDate').value;
   if (!dateVal) { toast('Enter production date first','#c0392b'); return; }
@@ -751,26 +934,39 @@ function renderDayTbl(){
 }
 
 // ══════════════════════════════════════════════════════
-// MODAL / CONFIG
+// MODAL / CONFIG (API)
 // ══════════════════════════════════════════════════════
-function openModal(){
-  document.getElementById('cUrl').value = CFG.url||'';
+function openConfigModal(){
+  document.getElementById('cUrlProd').value = CFG.prodUrl||'';
+  document.getElementById('cUrlVendor').value = CFG.vendorUrl||'';
   document.getElementById('cfgOvl').classList.add('open');
 }
-function closeModal(){ document.getElementById('cfgOvl').classList.remove('open'); }
+function closeConfigModal(){ 
+  // Allow closing only if we have at least prod URL
+  if(CFG.prodUrl) document.getElementById('cfgOvl').classList.remove('open'); 
+}
 function saveConfig(){
-  CFG.url = document.getElementById('cUrl').value.trim();
-  if(!CFG.url){ toast('Paste the Apps Script URL','#c0392b'); return; }
+  CFG.prodUrl = document.getElementById('cUrlProd').value.trim();
+  CFG.vendorUrl = document.getElementById('cUrlVendor').value.trim();
+  
+  if(!CFG.prodUrl || !CFG.vendorUrl){ toast('Paste BOTH Apps Script URLs','#c0392b'); return; }
+  
   localStorage.setItem('jaycoCfg', JSON.stringify(CFG));
-  closeModal();
-  document.getElementById('notCfgBanner').classList.remove('show');
-  loadAll();
+  document.getElementById('cfgOvl').classList.remove('open');
+  
+  // Show login after setup
+  if(!CU) {
+      document.getElementById('loginOvl').classList.add('open');
+  } else {
+      document.getElementById('notCfgBanner').classList.remove('show');
+      loadAll();
+  }
 }
 function updateBadge(state){
   const dot=document.getElementById('syncDot'),lbl=document.getElementById('syncLbl');
   if(state==='loading'){dot.className='dot warn';lbl.textContent='Loading…';return;}
   if(state==='err'){dot.className='dot err';lbl.textContent='Error';return;}
-  if(!CFG.url){dot.className='dot warn';lbl.textContent='Not configured';return;}
+  if(!CFG.prodUrl){dot.className='dot warn';lbl.textContent='Not configured';return;}
   dot.className='dot';lbl.textContent='Connected';
 }
 
